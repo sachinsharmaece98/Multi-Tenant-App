@@ -142,3 +142,13 @@ TENANT_MODEL = "adminapp.Tenant"
 
 TENANT_DOMAIN_MODEL = "adminapp.Domain"
  
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/0",  # Adjust Redis DB as needed
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "KEY_PREFIX": "user_app"
+    }
+}
