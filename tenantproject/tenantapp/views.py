@@ -6,12 +6,22 @@ from .models import User
 from .serializers import UserSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from django.core.cache import cache
 
 class UserListCreateView(APIView):
 
     def get(self, request):
+
+        cache_key = "all_users"
+        cached_users = cache.get(cache_key)
+
+        if cached_users:
+            # Return cached data if available
+            return Response(cached_users)
+
         users = User.objects.all()
         serializer = UserSerializer(users, many=True)
+        cache.set(cache_key, serializer.data, timeout=3600)
         return Response(serializer.data)
         
     @swagger_auto_schema(
@@ -23,14 +33,27 @@ class UserListCreateView(APIView):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
+            
+            cache.delete("all_users")
+            
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UserDetailView(APIView):
    
     def get_object(self, pk):
+
+        cache_key = f"user_{pk}"
+        cached_user = cache.get(cache_key)
+
+        if cached_user:
+            # Return cached data if available
+            return cached_user
+            
         try:
-            return User.objects.get(pk=pk)
+            user = User.objects.get(pk=pk)
+            cache.set(cache_key, user, timeout=3600)  # Cache for 1 hour
+            return user
         except User.DoesNotExist:
             return None
 
@@ -52,6 +75,11 @@ class UserDetailView(APIView):
             serializer = UserSerializer(user, data=request.data)
             if serializer.is_valid():
                 serializer.save()
+
+                cache_key = f"user_{pk}"
+                cache.set(cache_key, user, timeout=3600)
+                cache.delete("all_users")
+                
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -60,5 +88,10 @@ class UserDetailView(APIView):
         user = self.get_object(pk)
         if user:
             user.delete()
+
+            cache_key = f"user_{pk}"
+            cache.delete(cache_key)
+            cache.delete("all_users")
+            
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
