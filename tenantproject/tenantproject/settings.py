@@ -41,7 +41,7 @@ SHARED_APPS = [
     'django.contrib.staticfiles',
 ]
 
-TENANT_APPS = ["tenantapp"]
+TENANT_APPS = ["tenantapp", "drf_yasg"]
 
 INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]
 
